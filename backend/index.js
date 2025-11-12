@@ -5,11 +5,11 @@ import dotenv from 'dotenv';
 import path from "path";
 
 import loginRoutes from "./routes/loginRoutes.js";
+import artigoRoutes from "./routes/artigoRoutes.js";
 import Database from './config/db.js';
 
 //dotenv
 dotenv.config();
-
 
 const app = express();
 const port = process.env.PORT;
@@ -23,6 +23,7 @@ app.use(express.json()); // caso futuramente queira enviar JSON
 Database.connect();//BD
 
 app.use("/login", loginRoutes);
+app.use("/artigo", artigoRoutes);
 
 app.use("/uploads", express.static("uploads"));
 app.use("/assets", express.static(path.join(__dirname, "assets")));
