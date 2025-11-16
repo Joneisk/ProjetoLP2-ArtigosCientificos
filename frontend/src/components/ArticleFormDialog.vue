@@ -1,203 +1,209 @@
-<!-- src/components/ArticleFormDialog.vue -->
-<template>
-  <Dialog :open="props.open" @update:open="props.onOpenChange">
-    <DialogContent class="max-w-3xl max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>
-          {{ props.editingArticle ? 'Editar Artigo' : 'Publicar Novo Artigo' }}
-        </DialogTitle>
-        <DialogDescription>
-          Preencha os dados do seu artigo científico.
-        </DialogDescription>
-      </DialogHeader>
-
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <!-- Título -->
-        <div class="space-y-2">
-          <Label for="title">Título do Artigo</Label>
-          <Input
-            id="title"
-            type="text"
-            placeholder="Digite o título do artigo"
-            v-model="title"
-            required
-          />
-        </div>
-
-        <!-- Categoria -->
-        <div class="space-y-2">
-          <Label for="category">Categoria</Label>
-          <Select v-model="category" required>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione uma categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Medicina">Medicina</SelectItem>
-              <SelectItem value="Física">Física</SelectItem>
-              <SelectItem value="Biologia">Biologia</SelectItem>
-              <SelectItem value="Engenharia">Engenharia</SelectItem>
-              <SelectItem value="Neurociência">Neurociência</SelectItem>
-              <SelectItem value="Computação">Computação</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <!-- Resumo -->
-        <div class="space-y-2">
-          <Label for="abstract">Resumo (Abstract)</Label>
-          <Textarea
-            id="abstract"
-            placeholder="Digite o resumo do artigo"
-            v-model="abstract"
-            rows="3"
-            required
-          />
-        </div>
-
-        <!-- Conteúdo -->
-        <div class="space-y-2">
-          <Label for="content">Conteúdo Completo</Label>
-          <Textarea
-            id="content"
-            placeholder="Digite o conteúdo completo do artigo"
-            v-model="content"
-            rows="8"
-            required
-          />
-        </div>
-
-        <!-- Autores -->
-        <div class="space-y-2">
-          <Label for="authors">Autores</Label>
-          <Input
-            id="authors"
-            type="text"
-            placeholder="Autor 1, Autor 2, Autor 3"
-            v-model="authors"
-            required
-          />
-          <p class="text-xs text-gray-500">Separe os autores por vírgula</p>
-        </div>
-
-        <!-- Palavras-chave -->
-        <div class="space-y-2">
-          <Label for="keywords">Palavras-chave</Label>
-          <Input
-            id="keywords"
-            type="text"
-            placeholder="Palavra1, Palavra2, Palavra3"
-            v-model="keywords"
-            required
-          />
-          <p class="text-xs text-gray-500">Separe as palavras-chave por vírgula</p>
-        </div>
-
-        <!-- Ações -->
-        <div class="flex gap-2 justify-end pt-4">
-          <Button type="button" variant="outline" @click="props.onOpenChange(false)">
-            Cancelar
-          </Button>
-          <Button type="submit">
-            {{ props.editingArticle ? 'Atualizar' : 'Publicar' }}
-          </Button>
-        </div>
-      </form>
-    </DialogContent>
-  </Dialog>
-</template>
-
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { toast } from 'vue-sonner'
+import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { X } from 'lucide-vue-next';
+import { CATEGORIES } from '@/types';
+import type { Article, ArticleFormData } from '@/types';
+import { toast } from 'vue-sonner';
 
-// UI Components (nomes padronizados em lowercase para compatibilidade com Vite)
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog.vue'
-import { Input } from '@/components/ui/input.vue'
-import { Label } from '@/components/ui/label.vue'
-import { Button } from '@/components/ui/button.vue'
-import { Textarea } from '@/components/ui/textarea.vue'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select.vue'
-
-// Props tipadas
 const props = defineProps<{
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSave: (article: any) => void
-  editingArticle?: any | null
-}>()
+  open: boolean;
+  article?: Article | null;
+}>();
 
-// Campos do formulário
-const title = ref('')
-const abstract = ref('')
-const content = ref('')
-const authors = ref('')
-const keywords = ref('')
-const category = ref('')
+const emit = defineEmits<{
+  'update:open': [value: boolean];
+  save: [data: ArticleFormData, articleId?: string];
+}>();
 
-// Resetar formulário
-function resetForm() {
-  title.value = ''
-  abstract.value = ''
-  content.value = ''
-  authors.value = ''
-  keywords.value = ''
-  category.value = ''
-}
+const title = ref('');
+const category = ref('');
+const abstract = ref('');
+const content = ref('');
+const authors = ref('');
+const keywords = ref('');
 
-// Preenche automaticamente quando abre para edição
-watch(
-  () => [props.editingArticle, props.open],
-  () => {
-    if (props.editingArticle) {
-      const a = props.editingArticle
-      title.value = a.title || ''
-      abstract.value = a.abstract || ''
-      content.value = a.content || ''
-      authors.value = Array.isArray(a.authors) ? a.authors.join(', ') : ''
-      keywords.value = Array.isArray(a.keywords) ? a.keywords.join(', ') : ''
-      category.value = a.category || ''
-    } else {
-      resetForm()
-    }
-  },
-  { immediate: true }
-)
+watch(() => props.article, (article) => {
+  if (article) {
+    title.value = article.title;
+    category.value = article.category;
+    abstract.value = article.abstract;
+    content.value = article.content;
+    authors.value = article.authors.join(', ');
+    keywords.value = article.keywords.join(', ');
+  }
+});
 
-// Envio do formulário
-function handleSubmit() {
-  const articleData = {
-    title: title.value.trim(),
-    abstract: abstract.value.trim(),
-    content: content.value.trim(),
-    authors: authors.value.split(',').map(a => a.trim()),
-    keywords: keywords.value.split(',').map(k => k.trim()),
+watch(() => props.open, (isOpen) => {
+  if (!isOpen && !props.article) {
+    resetForm();
+  }
+});
+
+const resetForm = () => {
+  title.value = '';
+  category.value = '';
+  abstract.value = '';
+  content.value = '';
+  authors.value = '';
+  keywords.value = '';
+};
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.open) {
+    handleClose();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
+
+const handleSubmit = () => {
+  if (!title.value || !category.value || !abstract.value || !content.value || !authors.value || !keywords.value) {
+    toast.error('Preencha todos os campos');
+    return;
+  }
+
+  const formData: ArticleFormData = {
+    title: title.value,
     category: category.value,
-  }
+    abstract: abstract.value,
+    content: content.value,
+    authors: authors.value,
+    keywords: keywords.value,
+  };
 
-  // Se for edição, preserva o id
-  if (props.editingArticle?.id) {
-    articleData.id = props.editingArticle.id
-  }
+  emit('save', formData, props.article?.id);
+  emit('update:open', false);
+  resetForm();
+};
 
-  props.onSave(articleData)
-  toast.success(
-    props.editingArticle
-      ? 'Artigo atualizado com sucesso!'
-      : 'Artigo publicado com sucesso!'
-  )
-  props.onOpenChange(false)
-  resetForm()
-}
+const handleClose = () => {
+  emit('update:open', false);
+  if (!props.article) {
+    resetForm();
+  }
+};
 </script>
+
+<template>
+  <Transition name="fade">
+    <div v-if="open" class="modal-overlay" @click.self="handleClose">
+      <div class="modal-content w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">
+            {{ article ? 'Editar Artigo' : 'Publicar Novo Artigo' }}
+          </h2>
+          <button
+            @click="handleClose"
+            class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X :size="20" class="text-gray-600" />
+          </button>
+        </div>
+
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Título do Artigo *
+            </label>
+            <input
+              v-model="title"
+              type="text"
+              required
+              placeholder="Digite o título do artigo"
+              class="input"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Categoria *
+            </label>
+            <select v-model="category" required class="select">
+              <option value="">Selecione uma categoria</option>
+              <option v-for="cat in CATEGORIES" :key="cat" :value="cat">
+                {{ cat }}
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Resumo / Abstract *
+            </label>
+            <textarea
+              v-model="abstract"
+              required
+              rows="3"
+              placeholder="Escreva um resumo do artigo"
+              class="textarea"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Conteúdo Completo *
+            </label>
+            <textarea
+              v-model="content"
+              required
+              rows="8"
+              placeholder="Escreva o conteúdo completo do artigo"
+              class="textarea"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Autores *
+            </label>
+            <input
+              v-model="authors"
+              type="text"
+              required
+              placeholder="Separe os autores por vírgula"
+              class="input"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Exemplo: Dr. João Silva, Dra. Maria Santos
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Palavras-chave *
+            </label>
+            <input
+              v-model="keywords"
+              type="text"
+              required
+              placeholder="Separe as palavras-chave por vírgula"
+              class="input"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Exemplo: IA, Medicina, Diagnóstico
+            </p>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button
+              type="button"
+              @click="handleClose"
+              class="btn btn-outline flex-1"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary flex-1">
+              {{ article ? 'Atualizar' : 'Publicar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </Transition>
+</template>

@@ -1,91 +1,99 @@
+<script setup lang="ts">
+import { ref } from 'vue';
+import { BookOpen, PlusCircle, User, ChevronDown } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth';
+
+const emit = defineEmits(['openLogin', 'openRegister', 'openNewArticle']);
+
+const authStore = useAuthStore();
+const showDropdown = ref(false);
+
+const handleLogout = () => {
+  authStore.logout();
+  showDropdown.value = false;
+};
+</script>
+
 <template>
-  <header class="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
-    <div class="container flex h-16 items-center justify-between px-4">
-      <!-- LOGO -->
-      <div class="flex items-center gap-2 select-none">
-        <BookOpen class="h-6 w-6 text-blue-600" />
-        <span class="text-xl text-blue-600 font-semibold">SciHub Research</span>
-      </div>
+  <header class="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 text-primary font-bold">
+          <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md">
+            <BookOpen :size="24" class="text-primary-foreground" />
+          </div>
+          <span class="text-lg hidden sm:inline">SciHub</span>
+        </div>
 
-      <!-- AÇÕES -->
-      <div class="flex items-center gap-3">
-        <!-- ✅ Usuário logado -->
-        <template v-if="user?.value">
-          <Button @click="props.onNewArticleClick" class="gap-2">
-            <PlusCircle class="h-4 w-4" />
-            Novo Artigo
-          </Button>
+        <!-- Controles -->
+        <div class="flex items-center gap-3">
+          <template v-if="!authStore.user">
+            <button @click="emit('openLogin')" class="btn btn-outline hidden sm:inline-flex">
+              Entrar
+            </button>
+            <button @click="emit('openRegister')" class="btn btn-primary">
+              Registrar
+            </button>
+          </template>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" class="gap-2">
-                <User class="h-4 w-4" />
-                {{ user?.value?.name || 'Usuário' }}
-              </Button>
-            </DropdownMenuTrigger>
+          <template v-else>
+            <button @click="emit('openNewArticle')" class="btn btn-primary flex items-center gap-2 hidden sm:inline-flex">
+              <PlusCircle :size="18" />
+              Novo Artigo
+            </button>
+            <button @click="emit('openNewArticle')" class="btn btn-primary p-2 sm:hidden">
+              <PlusCircle :size="18" />
+            </button>
 
-            <DropdownMenuContent align="end" class="w-56">
-              <div class="px-2 py-1.5">
-                <p class="text-sm font-medium">{{ user?.value?.name }}</p>
-                <p class="text-xs text-gray-500">{{ user?.value?.email }}</p>
-                <p v-if="user?.value?.institution" class="text-xs text-gray-500">
-                  {{ user?.value?.institution }}
-                </p>
-              </div>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                @click="handleLogout"
-                class="gap-2 text-red-600 cursor-pointer"
+            <div class="relative">
+              <button
+                @click="showDropdown = !showDropdown"
+                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors"
               >
-                <LogOut class="h-4 w-4" />
-                Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </template>
+                <div class="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center shadow-md">
+                  <User :size="18" class="text-primary-foreground" />
+                </div>
+                <ChevronDown :size="16" class="text-muted-foreground hidden sm:inline" />
+              </button>
 
-        <!-- 🚪 Usuário não logado -->
-        <template v-else>
-          <Button variant="outline" @click="props.onLoginClick" class="gap-2">
-            <LogIn class="h-4 w-4" />
-            Entrar
-          </Button>
-          <Button @click="props.onRegisterClick">Registrar</Button>
-        </template>
+              <Transition name="fade">
+                <div
+                  v-if="showDropdown"
+                  class="absolute right-0 mt-2 w-80 bg-card rounded-lg shadow-lg border border-border py-2"
+                  @click="showDropdown = false"
+                >
+                  <div class="px-4 py-3 border-b border-border">
+                    <p class="text-sm font-semibold text-foreground">{{ authStore.user.name }}</p>
+                    <p class="text-xs text-muted-foreground mt-1">{{ authStore.user.email }}</p>
+                    <p v-if="authStore.user.institution" class="text-xs text-muted-foreground mt-1">
+                      {{ authStore.user.institution }}
+                    </p>
+                  </div>
+                  <button
+                    @click="handleLogout"
+                    class="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-medium"
+                  >
+                    Sair
+                  </button>
+                </div>
+              </Transition>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
   </header>
 </template>
 
-<script setup lang="ts">
-import { BookOpen, LogIn, LogOut, User, PlusCircle } from 'lucide-vue-next'
-import { useAuth } from '@/contexts/AuthContext'
-
-// UI Components (adaptados do shadcn-vue)
-import { Button } from '@/components/ui/button.vue'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.vue'
-
-// Props
-const props = defineProps<{
-  onLoginClick: () => void
-  onRegisterClick: () => void
-  onNewArticleClick: () => void
-}>()
-
-// Contexto de autenticação
-const auth = useAuth()
-const user = auth?.user
-const logout = auth?.logout
-
-function handleLogout() {
-  if (logout) logout()
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
 }
-</script>
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

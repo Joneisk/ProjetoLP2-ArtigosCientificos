@@ -1,95 +1,125 @@
-<!-- LoginDialog.vue -->
-<template>
-  <Dialog :open="open" @update:open="onOpenChange">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Entrar no SciHub Research</DialogTitle>
-        <DialogDescription>
-          Entre com suas credenciais para acessar todos os recursos
-        </DialogDescription>
-      </DialogHeader>
+<script setup lang="ts">
+import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { X } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth';
+import { toast } from 'vue-sonner';
 
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <!-- Email -->
-        <div class="space-y-2">
-          <Label for="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="seu@email.com"
-            v-model="email"
-            required
-          />
-        </div>
+const props = defineProps<{
+  open: boolean;
+}>();
 
-        <!-- Senha -->
-        <div class="space-y-2">
-          <Label for="password">Senha</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="********"
-            v-model="password"
-            required
-          />
-        </div>
+const emit = defineEmits<{
+  'update:open': [value: boolean];
+}>();
 
-        <Button type="submit" class="w-full" :disabled="loading">
-          {{ loading ? 'Entrando...' : 'Entrar' }}
-        </Button>
-      </form>
-    </DialogContent>
-  </Dialog>
-</template>
+const authStore = useAuthStore();
+const email = ref('');
+const password = ref('');
+const loading = ref(false);
 
-<script setup>
-import { ref } from 'vue'
-import { toast } from 'vue-sonner'
-import { useAuth } from '@/contexts/AuthContext'
-
-// Importa os componentes de UI usados nos outros diálogos
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog.vue'
-import { Input } from '@/components/ui/input.vue'
-import { Label } from '@/components/ui/label.vue'
-import { Button } from '@/components/ui/button.vue'
-
-// Props
-const props = defineProps({
-  open: { type: Boolean, required: true },
-  onOpenChange: { type: Function, required: true },
-})
-
-// Estados
-const email = ref('')
-const password = ref('')
-const loading = ref(false)
-
-// Contexto de autenticação
-const { login } = useAuth()
-
-// Envio do formulário
-async function handleSubmit() {
-  loading.value = true
-  try {
-    const success = await login(email.value, password.value)
-    if (success) {
-      toast.success('Login realizado com sucesso!')
-      props.onOpenChange(false)
-      email.value = ''
-      password.value = ''
-    } else {
-      toast.error('Credenciais inválidas')
-    }
-  } catch (err) {
-    toast.error('Erro ao fazer login')
-  } finally {
-    loading.value = false
+// Limpa formulário quando fecha
+watch(() => props.open, (isOpen) => {
+  if (!isOpen) {
+    email.value = '';
+    password.value = '';
   }
-}
+});
+
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.open) {
+    handleClose();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
+const handleSubmit = async () => {
+  if (!email.value || !password.value) {
+    toast.error('Preencha todos os campos');
+    return;
+  }
+
+  loading.value = true;
+
+  try {
+    const success = await authStore.login(email.value, password.value);
+
+    if (success) {
+      toast.success('Login realizado com sucesso!');
+      emit('update:open', false);
+    } else {
+      toast.error('Credenciais inválidas');
+    }
+  } catch (error) {
+    toast.error('Erro ao fazer login');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleClose = () => {
+  emit('update:open', false);
+};
 </script>
+
+<template>
+  <Transition name="fade">
+    <div v-if="open" class="modal-overlay" @click.self="handleClose">
+      <div class="modal-content w-full max-w-md p-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Entrar</h2>
+          <button
+            @click="handleClose"
+            class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X :size="20" class="text-gray-600" />
+          </button>
+        </div>
+
+        <!-- Formulário -->
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              v-model="email"
+              type="email"
+              required
+              placeholder="seu@email.com"
+              class="input"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Senha
+            </label>
+            <input
+              v-model="password"
+              type="password"
+              required
+              placeholder="••••••••"
+              class="input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="loading"
+            class="btn btn-primary w-full"
+          >
+            {{ loading ? 'Entrando...' : 'Entrar' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </Transition>
+</template>

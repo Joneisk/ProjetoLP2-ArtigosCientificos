@@ -1,219 +1,236 @@
-<!-- src/components/ArticleDetailsDialog.vue -->
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { X, User, ThumbsUp, ThumbsDown, MessageSquare, Edit } from 'lucide-vue-next';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { Article, Feedback } from '@/types';
+import { useAuthStore } from '@/stores/auth';
+import { toast } from 'vue-sonner';
+
+const props = defineProps<{
+  open: boolean;
+  article: Article | null;
+  feedbacks: Feedback[];
+}>();
+
+const emit = defineEmits<{
+  'update:open': [value: boolean];
+  like: [];
+  dislike: [];
+  addFeedback: [comment: string];
+  editArticle: [];
+}>();
+
+const authStore = useAuthStore();
+const newComment = ref('');
+
+const formattedDate = computed(() => {
+  if (!props.article?.date) return '';
+  return format(new Date(props.article.date), "dd 'de' MMMM 'de' yyyy", {
+    locale: ptBR,
+  });
+});
+
+const isAuthor = computed(() => {
+  return authStore.user?.id === props.article?.authorId || props.article?.authorId === undefined;
+});
+const handleAddFeedback = () => {
+  if (!newComment.value.trim()) {
+    toast.error('Digite um comentário antes de enviar');
+    return;
+  }
+
+  emit('addFeedback', newComment.value);
+  newComment.value = '';
+  toast.success('Feedback adicionado com sucesso!');
+};
+
+const handleClose = () => {
+  emit('update:open', false);
+  newComment.value = '';
+};
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.open) {
+    handleClose();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
+
+
+const handleEdit = () => {
+  emit('editArticle');
+  handleClose();
+};
+
+const formatFeedbackDate = (dateString: string) => {
+  return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", {
+    locale: ptBR,
+  });
+};
+</script>
+
 <template>
-  <Dialog :open="props.open" @update:open="props.onOpenChange">
-    <DialogContent class="max-w-4xl max-h-[90vh]">
-      <DialogHeader>
-        <div class="flex items-start justify-between gap-4">
-          <DialogTitle class="text-2xl pr-8">{{ props.article?.title }}</DialogTitle>
-          <Badge variant="secondary">{{ props.article?.category }}</Badge>
+  <Transition name="fade">
+    <div v-if="open && article" class="modal-overlay" @click.self="handleClose">
+      <div class="modal-content w-full max-w-4xl p-8 max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-6">
+          <div class="flex-1 pr-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+              {{ article.title }}
+            </h2>
+            <span class="badge badge-primary">{{ article.category }}</span>
+          </div>
+          <button
+            @click="handleClose"
+            class="p-1 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+          >
+            <X :size="20" class="text-gray-600" />
+          </button>
         </div>
-      </DialogHeader>
 
-      <ScrollArea class="h-[calc(90vh-120px)] pr-4">
-        <div class="space-y-6">
-          <!-- Metadados -->
-          <div class="space-y-2">
-            <div class="flex items-center gap-2 text-sm text-gray-600">
-              <User class="h-4 w-4" />
-              <span>{{ props.article?.authors.join(', ') }}</span>
-            </div>
-
-            <div class="flex items-center gap-2 text-sm text-gray-600">
-              <Calendar class="h-4 w-4" />
-              <span>{{ formatDate(props.article?.publishedDate) }}</span>
-            </div>
-
-            <div class="flex flex-wrap gap-1">
-              <Badge
-                v-for="(keyword, index) in props.article?.keywords"
-                :key="index"
-                variant="outline"
-                class="text-xs"
-              >
-                {{ keyword }}
-              </Badge>
-            </div>
+        <!-- Metadados -->
+        <div class="space-y-2 mb-6">
+          <div class="flex items-center gap-2 text-sm text-gray-600">
+            <User :size="16" />
+            <span>{{ article.authors.join(', ') }}</span>
           </div>
-
-          <!-- Resumo -->
-          <div>
-            <p class="text-gray-700">{{ props.article?.abstract }}</p>
-          </div>
-
-          <Separator />
-
-          <!-- Conteúdo -->
-          <div>
-            <p class="whitespace-pre-wrap text-gray-700">{{ props.article?.content }}</p>
-          </div>
-
-          <Separator />
-
-          <!-- Likes / Dislikes / Editar -->
-          <div class="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              class="gap-1"
-              :disabled="!user.value"
-              @click="() => user.value && props.onLike && props.onLike(props.article.id)"
+          <p class="text-sm text-gray-500">{{ formattedDate }}</p>
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="keyword in article.keywords"
+              :key="keyword"
+              class="badge badge-outline"
             >
-              <ThumbsUp
-                class="h-4 w-4"
-                :class="{ 'fill-blue-500 text-blue-500': props.article?.userVote === 'like' }"
-              />
-              <span>{{ props.article?.likes }}</span>
-            </Button>
+              {{ keyword }}
+            </span>
+          </div>
+        </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              class="gap-1"
-              :disabled="!user.value"
-              @click="() => user.value && props.onDislike && props.onDislike(props.article.id)"
-            >
-              <ThumbsDown
-                class="h-4 w-4"
-                :class="{ 'fill-red-500 text-red-500': props.article?.userVote === 'dislike' }"
-              />
-              <span>{{ props.article?.dislikes }}</span>
-            </Button>
+        <!-- Abstract -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Resumo</h3>
+          <p class="text-gray-700">{{ article.abstract }}</p>
+        </div>
 
-            <Button
-              v-if="isAuthor && props.onEdit"
-              variant="outline"
-              size="sm"
-              class="gap-1 ml-auto"
-              @click="() => { props.onEdit(props.article); props.onOpenChange(false); }"
-            >
-              <Edit class="h-4 w-4" />
-              Editar Artigo
-            </Button>
+        <hr class="my-6 border-gray-200" />
+
+        <!-- Conteúdo -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Conteúdo Completo</h3>
+          <p class="text-gray-700 whitespace-pre-wrap">{{ article.content }}</p>
+        </div>
+
+        <hr class="my-6 border-gray-200" />
+
+        <!-- Botões de interação -->
+        <div class="flex items-center gap-4 mb-6">
+          <button
+            @click="emit('like')"
+            :disabled="!authStore.user"
+            :class="[
+              'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
+              article.userVote === 'like'
+                ? 'bg-blue-100 text-blue-600'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600',
+              !authStore.user && 'opacity-50 cursor-not-allowed'
+            ]"
+          >
+            <ThumbsUp :size="20" />
+            <span class="font-medium">{{ article.likes }}</span>
+          </button>
+
+          <button
+            @click="emit('dislike')"
+            :disabled="!authStore.user"
+            :class="[
+              'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
+              article.userVote === 'dislike'
+                ? 'bg-red-100 text-red-600'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600',
+              !authStore.user && 'opacity-50 cursor-not-allowed'
+            ]"
+          >
+            <ThumbsDown :size="20" />
+            <span class="font-medium">{{ article.dislikes }}</span>
+          </button>
+
+          <button
+            v-if="isAuthor"
+            @click="handleEdit"
+            class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ml-auto"
+          >
+            <Edit :size="18" />
+            Editar Artigo
+          </button>
+        </div>
+
+        <hr class="my-6 border-gray-200" />
+
+        <!-- Seção de Feedbacks -->
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <MessageSquare :size="20" class="text-gray-600" />
+            <h3 class="text-lg font-semibold text-gray-900">
+              Feedbacks ({{ feedbacks.length }})
+            </h3>
           </div>
 
-          <Separator />
+          <!-- Formulário de novo feedback -->
+          <div v-if="authStore.user" class="mb-6">
+            <textarea
+              v-model="newComment"
+              rows="3"
+              placeholder="Deixe seu feedback sobre este artigo..."
+              class="textarea mb-2"
+            />
+            <button
+              @click="handleAddFeedback"
+              class="btn btn-primary"
+            >
+              Enviar Feedback
+            </button>
+          </div>
 
-          <!-- Seção de Feedbacks -->
-          <div class="space-y-4">
-            <div class="flex items-center gap-2">
-              <MessageSquare class="h-5 w-5" />
-              <span class="text-lg">Feedbacks ({{ props.feedbacks.length }})</span>
-            </div>
+          <div v-else class="mb-6 p-4 bg-gray-50 rounded-lg text-center text-gray-600">
+            Faça login para deixar seu feedback
+          </div>
 
-            <!-- Novo feedback -->
-            <div v-if="user.value" class="space-y-2">
-              <Textarea
-                placeholder="Escreva seu feedback sobre este artigo..."
-                v-model="newComment"
-                rows="3"
-              />
-              <Button size="sm" @click="handleAddFeedback">Enviar Feedback</Button>
-            </div>
-            <p v-else class="text-sm text-gray-500">
-              Faça login para deixar seu feedback.
-            </p>
-
-            <!-- Lista de feedbacks -->
-            <div class="space-y-3">
-              <p v-if="props.feedbacks.length === 0" class="text-sm text-gray-500">
-                Nenhum feedback ainda. Seja o primeiro!
-              </p>
-
-              <div
-                v-else
-                v-for="feedback in props.feedbacks"
-                :key="feedback.id"
-                class="border rounded-lg p-4 space-y-2"
-              >
-                <div class="flex items-center gap-2">
-                  <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <User class="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p class="text-sm">{{ feedback.userName }}</p>
-                    <p class="text-xs text-gray-500">
-                      {{ formatDateTime(feedback.createdAt) }}
-                    </p>
-                  </div>
+          <!-- Lista de feedbacks -->
+          <div v-if="feedbacks.length > 0" class="space-y-4">
+            <div
+              v-for="feedback in feedbacks"
+              :key="feedback.id"
+              class="border border-gray-200 rounded-lg p-4"
+            >
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User :size="20" class="text-white" />
                 </div>
-                <p class="text-sm text-gray-700">{{ feedback.comment }}</p>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-semibold text-gray-900">{{ feedback.userName }}</span>
+                    <span class="text-sm text-gray-500">{{ formatFeedbackDate(feedback.createdAt) }}</span>
+                  </div>
+                  <p class="text-gray-700">{{ feedback.comment }}</p>
+                </div>
               </div>
             </div>
           </div>
+
+          <div v-else class="text-center py-8 text-gray-500">
+            Nenhum feedback ainda. Seja o primeiro!
+          </div>
         </div>
-      </ScrollArea>
-    </DialogContent>
-  </Dialog>
+      </div>
+    </div>
+  </Transition>
 </template>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { toast } from 'vue-sonner'
-import { useAuth } from '@/contexts/AuthContext'
-
-// UI Components (shadcn-vue adaptados)
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog.vue'
-import { Button } from '@/components/ui/button.vue'
-import { Badge } from '@/components/ui/badge.vue'
-import { Textarea } from '@/components/ui/textarea.vue'
-import { ScrollArea } from '@/components/ui/scroll-area.vue'
-import { Separator } from '@/components/ui/separator.vue'
-
-// Ícones (lucide-vue-next)
-import {
-  ThumbsUp,
-  ThumbsDown,
-  MessageSquare,
-  Calendar,
-  User,
-  Edit,
-} from 'lucide-vue-next'
-
-// Props
-const props = defineProps<{
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  article: any
-  feedbacks: any[]
-  onLike?: (id: string) => void
-  onDislike?: (id: string) => void
-  onAddFeedback: (id: string, comment: string) => void
-  onEdit?: (article: any) => void
-}>()
-
-// Auth context
-const { user } = useAuth()
-const newComment = ref('')
-
-// Computed
-const isAuthor = computed(() => user.value?.id === props.article?.authorId)
-
-// Métodos
-function handleAddFeedback() {
-  if (!newComment.value.trim()) {
-    toast.error('Digite um comentário antes de enviar.')
-    return
-  }
-  props.onAddFeedback(props.article.id, newComment.value)
-  newComment.value = ''
-  toast.success('Feedback adicionado com sucesso!')
-}
-
-function formatDate(date?: string) {
-  if (!date) return ''
-  return new Date(date).toLocaleDateString('pt-BR')
-}
-
-function formatDateTime(date: string) {
-  const d = new Date(date)
-  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })}`
-}
-</script>

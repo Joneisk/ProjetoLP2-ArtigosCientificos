@@ -1,127 +1,139 @@
-<!-- src/components/ArticleCard.vue -->
+<script setup lang="ts">
+import { User, ThumbsUp, ThumbsDown, MessageSquare, Calendar, BookOpen } from 'lucide-vue-next';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { Article } from '@/types';
+import { useAuthStore } from '@/stores/auth';
+
+const props = defineProps<{
+  article: Article;
+}>();
+
+const emit = defineEmits<{
+  viewDetails: [];
+  like: [];
+  dislike: [];
+}>();
+
+const authStore = useAuthStore();
+
+const formattedDate = props.article.date 
+  ? format(new Date(props.article.date), 'dd MMM yyyy', { locale: ptBR })
+  : 'Data desconhecida';
+
+const handleLike = (e: Event) => {
+  e.stopPropagation();
+  if (authStore.user) {
+    emit('like');
+  }
+};
+
+const handleDislike = (e: Event) => {
+  e.stopPropagation();
+  if (authStore.user) {
+    emit('dislike');
+  }
+};
+</script>
+
 <template>
-  <Card
-    class="hover:shadow-lg transition-shadow cursor-pointer"
-    @click="() => props.onViewDetails(props.article)"
+  <div
+    @click="emit('viewDetails')"
+    class="bg-card rounded-lg border border-border hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden"
   >
-    <CardHeader>
-      <div class="flex items-start justify-between gap-2">
-        <div class="flex-1">
-          <CardTitle class="mb-2">{{ props.article.title }}</CardTitle>
-          <CardDescription>{{ props.article.abstract }}</CardDescription>
-        </div>
-        <Badge variant="secondary">{{ props.article.category }}</Badge>
+    <!-- Header com Título e Badge -->
+    <div class="border-b border-border p-4 sm:p-5">
+      <div class="flex items-start justify-between gap-3 mb-2">
+        <h3 class="text-base font-bold text-foreground line-clamp-2 flex-1 group-hover:text-primary transition-colors">
+          {{ article.title }}
+        </h3>
+        <span class="badge badge-primary text-xs font-bold flex-shrink-0">{{ article.category }}</span>
       </div>
-    </CardHeader>
+      <p class="text-xs text-muted-foreground line-clamp-2">
+        {{ article.abstract }}
+      </p>
+    </div>
 
-    <CardContent>
-      <div class="space-y-3">
-        <!-- Autor -->
-        <div class="flex items-center gap-2 text-sm text-gray-600">
-          <User class="h-4 w-4" />
-          <span>{{ props.article.authors.join(', ') }}</span>
+    <!-- Content -->
+    <div class="p-4 sm:p-5 space-y-3">
+      <!-- Metadados -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2 text-xs text-muted-foreground">
+          <User :size="14" class="flex-shrink-0" />
+          <span class="truncate">{{ article.authors.slice(0, 1).join(', ') }}</span>
         </div>
-
-        <!-- Data -->
-        <div class="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar class="h-4 w-4" />
-          <span>{{ formatDate(props.article.publishedDate) }}</span>
-        </div>
-
-        <!-- Palavras-chave -->
-        <div class="flex flex-wrap gap-1">
-          <Badge
-            v-for="(keyword, index) in props.article.keywords"
-            :key="index"
-            variant="outline"
-            class="text-xs"
-          >
-            {{ keyword }}
-          </Badge>
-        </div>
-
-        <!-- Botões -->
-        <div class="flex items-center gap-3 pt-2 border-t">
-          <!-- Like -->
-          <Button
-            variant="ghost"
-            size="sm"
-            class="gap-1"
-            :disabled="!props.isLoggedIn"
-            @click.stop="handleLike"
-          >
-            <ThumbsUp
-              class="h-4 w-4"
-              :class="{ 'fill-blue-500 text-blue-500': props.article.userVote === 'like' }"
-            />
-            <span>{{ props.article.likes }}</span>
-          </Button>
-
-          <!-- Dislike -->
-          <Button
-            variant="ghost"
-            size="sm"
-            class="gap-1"
-            :disabled="!props.isLoggedIn"
-            @click.stop="handleDislike"
-          >
-            <ThumbsDown
-              class="h-4 w-4"
-              :class="{ 'fill-red-500 text-red-500': props.article.userVote === 'dislike' }"
-            />
-            <span>{{ props.article.dislikes }}</span>
-          </Button>
-
-          <!-- Feedback -->
-          <Button variant="ghost" size="sm" class="gap-1">
-            <MessageSquare class="h-4 w-4" />
-            <span>Feedbacks</span>
-          </Button>
+        
+        <div class="flex items-center gap-2 text-xs text-muted-foreground">
+          <Calendar :size="14" class="flex-shrink-0" />
+          <span>{{ formattedDate }}</span>
         </div>
       </div>
-    </CardContent>
-  </Card>
+
+      <!-- Keywords -->
+      <div class="flex flex-wrap gap-1">
+        <span
+          v-for="keyword in article.keywords?.slice(0, 3)"
+          :key="keyword"
+          class="badge badge-outline text-xs"
+        >
+          {{ keyword }}
+        </span>
+      </div>
+
+      <!-- Botões de interação -->
+      <div class="flex items-center gap-2 pt-2 border-t border-border">
+        <!-- Like -->
+        <button
+          @click.stop="handleLike"
+          :disabled="!authStore.user"
+          :class="[
+            'flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium',
+            article.userVote === 'like'
+              ? 'bg-primary/10 text-primary'
+              : 'hover:bg-accent text-muted-foreground',
+            !authStore.user && 'opacity-50 cursor-not-allowed'
+          ]"
+          title="Curtir"
+        >
+          <ThumbsUp :size="14" />
+          <span>{{ article.likes }}</span>
+        </button>
+
+        <!-- Dislike -->
+        <button
+          @click.stop="handleDislike"
+          :disabled="!authStore.user"
+          :class="[
+            'flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium',
+            article.userVote === 'dislike'
+              ? 'bg-destructive/10 text-destructive'
+              : 'hover:bg-accent text-muted-foreground',
+            !authStore.user && 'opacity-50 cursor-not-allowed'
+          ]"
+          title="Não curtir"
+        >
+          <ThumbsDown :size="14" />
+          <span>{{ article.dislikes }}</span>
+        </button>
+
+        <!-- Feedbacks -->
+        <button
+          class="flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground transition-colors"
+          title="Feedbacks"
+        >
+          <MessageSquare :size="14" />
+          <span>0</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
-<script setup lang="ts">
-import { ThumbsUp, ThumbsDown, MessageSquare, Calendar, User } from 'lucide-vue-next'
-
-// UI Components (shadcn-vue adaptados)
-import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card.vue'
-import { Button } from '@/components/ui/button.vue'
-import { Badge } from '@/components/ui/badge.vue'
-
-// Tipagem e props
-const props = defineProps<{
-  article: {
-    id: string
-    title: string
-    abstract: string
-    content: string
-    authors: string[]
-    keywords: string[]
-    category: string
-    publishedDate: string
-    likes: number
-    dislikes: number
-    userVote?: 'like' | 'dislike' | null
-  }
-  isLoggedIn?: boolean
-  onViewDetails: (article: any) => void
-  onLike?: (articleId: string) => void
-  onDislike?: (articleId: string) => void
-}>()
-
-// Métodos
-function handleLike() {
-  if (props.isLoggedIn && props.onLike) props.onLike(props.article.id)
+<style scoped>
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-
-function handleDislike() {
-  if (props.isLoggedIn && props.onDislike) props.onDislike(props.article.id)
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('pt-BR')
-}
-</script>
+</style>

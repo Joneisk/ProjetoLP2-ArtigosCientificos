@@ -1,128 +1,156 @@
-<!-- src/components/RegisterDialog.vue -->
-<template>
-  <Dialog :open="props.open" @update:open="props.onOpenChange">
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Registrar no SciHub Research</DialogTitle>
-        <DialogDescription>
-          Crie sua conta para publicar e interagir com artigos científicos.
-        </DialogDescription>
-      </DialogHeader>
-
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <!-- Nome -->
-        <div class="space-y-2">
-          <Label for="name">Nome Completo</Label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="Dr. João Silva"
-            v-model="name"
-            required
-          />
-        </div>
-
-        <!-- Email -->
-        <div class="space-y-2">
-          <Label for="register-email">Email</Label>
-          <Input
-            id="register-email"
-            type="email"
-            placeholder="seu@email.com"
-            v-model="email"
-            required
-          />
-        </div>
-
-        <!-- Senha -->
-        <div class="space-y-2">
-          <Label for="register-password">Senha</Label>
-          <Input
-            id="register-password"
-            type="password"
-            placeholder="********"
-            v-model="password"
-            required
-          />
-        </div>
-
-        <!-- Instituição -->
-        <div class="space-y-2">
-          <Label for="institution">Instituição (Opcional)</Label>
-          <Input
-            id="institution"
-            type="text"
-            placeholder="Universidade Federal"
-            v-model="institution"
-          />
-        </div>
-
-        <!-- Botão -->
-        <Button type="submit" class="w-full" :disabled="loading">
-          {{ loading ? 'Registrando...' : 'Registrar' }}
-        </Button>
-      </form>
-    </DialogContent>
-  </Dialog>
-</template>
-
 <script setup lang="ts">
-import { ref } from 'vue'
-import { toast } from 'vue-sonner'
-import { useAuth } from '@/contexts/AuthContext'
+import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { X } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth';
+import { toast } from 'vue-sonner';
 
-// Componentes UI (garanta que o nome do arquivo é idêntico ao import)
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog.vue'
-import { Input } from '@/components/ui/input.vue'
-import { Label } from '@/components/ui/label.vue'
-import { Button } from '@/components/ui/button.vue'
-
-// Props
 const props = defineProps<{
-  open: boolean
-  onOpenChange: (value: boolean) => void
-}>()
+  open: boolean;
+}>();
 
-// Estado
-const name = ref('')
-const email = ref('')
-const password = ref('')
-const institution = ref('')
-const loading = ref(false)
+const emit = defineEmits<{
+  'update:open': [value: boolean];
+}>();
 
-// Contexto de autenticação
-const { register } = useAuth()
+const authStore = useAuthStore();
+const name = ref('');
+const email = ref('');
+const password = ref('');
+const institution = ref('');
+const loading = ref(false);
 
-// Envio do formulário
-async function handleSubmit() {
-  loading.value = true
+watch(() => props.open, (isOpen) => {
+  if (!isOpen) {
+    name.value = '';
+    email.value = '';
+    password.value = '';
+    institution.value = '';
+  }
+});
+
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.open) {
+    handleClose();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
+const handleSubmit = async () => {
+  if (!name.value || !email.value || !password.value) {
+    toast.error('Preencha todos os campos obrigatórios');
+    return;
+  }
+
+  loading.value = true;
+
   try {
-    const success = await register(
+    const success = await authStore.register(
       name.value,
       email.value,
       password.value,
-      institution.value
-    )
+      institution.value || undefined
+    );
+
     if (success) {
-      toast.success('Registro realizado com sucesso!')
-      props.onOpenChange(false)
-      name.value = ''
-      email.value = ''
-      password.value = ''
-      institution.value = ''
+      toast.success('Registro realizado com sucesso!');
+      emit('update:open', false);
     } else {
-      toast.error('Erro ao registrar')
+      toast.error('Erro ao registrar');
     }
-  } catch (err) {
-    toast.error('Erro ao fazer registro')
+  } catch (error) {
+    toast.error('Erro ao registrar');
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
+
+const handleClose = () => {
+  emit('update:open', false);
+};
 </script>
+
+<template>
+  <Transition name="fade">
+    <div v-if="open" class="modal-overlay" @click.self="handleClose">
+      <div class="modal-content w-full max-w-md p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-gray-900">Registrar</h2>
+          <button
+            @click="handleClose"
+            class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X :size="20" class="text-gray-600" />
+          </button>
+        </div>
+
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Nome Completo *
+            </label>
+            <input
+              v-model="name"
+              type="text"
+              required
+              placeholder="Seu nome completo"
+              class="input"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Email *
+            </label>
+            <input
+              v-model="email"
+              type="email"
+              required
+              placeholder="seu@email.com"
+              class="input"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Senha *
+            </label>
+            <input
+              v-model="password"
+              type="password"
+              required
+              placeholder="••••••••"
+              class="input"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Instituição (opcional)
+            </label>
+            <input
+              v-model="institution"
+              type="text"
+              placeholder="Sua universidade ou instituição"
+              class="input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="loading"
+            class="btn btn-primary w-full"
+          >
+            {{ loading ? 'Registrando...' : 'Registrar' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </Transition>
+</template>

@@ -1,7 +1,14 @@
+import './assets/main.css'
+
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+
 import App from './App.vue'
-import { provideAuth } from '@/contexts/AuthContext'
+import router from './router'
 
 const app = createApp(App)
-provideAuth() // fornece o contexto antes de montar
+
+app.use(createPinia())
+app.use(router)
+
 app.mount('#app')
