@@ -1,5 +1,5 @@
 import express from "express";
-import CategoriaController from "../controllers/CategoriaController.js";
+import CategoriaController from "../controller/CategoriaController.js";
 
 const router = express.Router();
 
@@ -9,13 +9,13 @@ router.post("/create", CategoriaController.create);
 // Listar todas as categorias
 router.get("/list", CategoriaController.list);
 
-// Buscar categoria por nome
-router.get("/get/:nome", CategoriaController.getByName);
+// Buscar categoria por ID
+router.get("/get/:id", CategoriaController.getById);
 
-// Atualizar categoria (por nome)
-router.put("/update/:nome", CategoriaController.update);
+// Atualizar categoria (por ID)
+router.put("/update/:id", CategoriaController.update);
 
-// Deletar categoria (por nome)
-router.delete("/delete/:nome", CategoriaController.delete);
+// Deletar categoria (por ID)
+router.delete("/delete/:id", CategoriaController.delete);
 
 export default router;

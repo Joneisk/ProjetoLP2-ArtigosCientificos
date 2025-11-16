@@ -62,10 +62,10 @@ const handleSubmit = async () => {
       toast.success('Registro realizado com sucesso!');
       emit('update:open', false);
     } else {
-      toast.error('Erro ao registrar');
+      toast.error(authStore.error || 'Erro ao registrar');
     }
   } catch (error) {
-    toast.error('Erro ao registrar');
+    toast.error(authStore.error || 'Erro ao registrar');
   } finally {
     loading.value = false;
   }

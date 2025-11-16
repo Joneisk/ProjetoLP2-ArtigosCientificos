@@ -1,16 +1,30 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { BookOpen, PlusCircle, User, ChevronDown } from 'lucide-vue-next';
+import { BookOpen, PlusCircle, User, ChevronDown, Settings } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
 
-const emit = defineEmits(['openLogin', 'openRegister', 'openNewArticle']);
+const emit = defineEmits(['openLogin', 'openRegister', 'openNewArticle', 'openResetPassword', 'openAdminCategories']);
 
 const authStore = useAuthStore();
 const showDropdown = ref(false);
 
+const isAdmin = () => {
+  return authStore.user?.email === 'admin@gmail.com';
+};
+
 const handleLogout = () => {
   authStore.logout();
   showDropdown.value = false;
+};
+
+const handleResetPassword = () => {
+  showDropdown.value = false;
+  emit('openResetPassword');
+};
+
+const handleAdminCategories = () => {
+  showDropdown.value = false;
+  emit('openAdminCategories');
 };
 </script>
 
@@ -38,12 +52,9 @@ const handleLogout = () => {
           </template>
 
           <template v-else>
-            <button @click="emit('openNewArticle')" class="btn btn-primary flex items-center gap-2 hidden sm:inline-flex">
+            <button @click="emit('openNewArticle')" class="btn btn-primary flex items-center gap-2">
               <PlusCircle :size="18" />
               Novo Artigo
-            </button>
-            <button @click="emit('openNewArticle')" class="btn btn-primary p-2 sm:hidden">
-              <PlusCircle :size="18" />
             </button>
 
             <div class="relative">
@@ -70,6 +81,20 @@ const handleLogout = () => {
                       {{ authStore.user.institution }}
                     </p>
                   </div>
+                  <button
+                    @click="handleResetPassword"
+                    class="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-accent transition-colors font-medium"
+                  >
+                    Redefinir Senha
+                  </button>
+                  <button
+                    v-if="isAdmin()"
+                    @click="handleAdminCategories"
+                    class="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <Settings :size="16" />
+                    Gerenciar Categorias
+                  </button>
                   <button
                     @click="handleLogout"
                     class="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-medium"

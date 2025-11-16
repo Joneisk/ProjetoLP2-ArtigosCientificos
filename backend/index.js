@@ -3,9 +3,11 @@ import mongoose from 'mongoose';
 import __dirname from './utils/pathUtils.js';
 import dotenv from 'dotenv';
 import path from "path";
+import cors from 'cors';
 
 import loginRoutes from "./routes/loginRoutes.js";
 import artigoRoutes from "./routes/artigoRoutes.js";
+import categoriaRoutes from "./routes/categoriaRoutes.js";
 import Database from './config/db.js';
 
 //dotenv
@@ -17,6 +19,12 @@ const port = process.env.PORT;
 app.set('views', path.join(__dirname, 'views')); //Definindo a pasta do template EJS
 app.set('view engine', 'ejs'); //Definindo o motor de template EJS
 
+// CORS habilitado para o frontend
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
+
 app.use(express.urlencoded({ extended: true })); // lê dados de form HTML
 app.use(express.json()); // caso futuramente queira enviar JSON
 
@@ -24,6 +32,7 @@ Database.connect();//BD
 
 app.use("/login", loginRoutes);
 app.use("/artigo", artigoRoutes);
+app.use("/categoria", categoriaRoutes);
 
 app.use("/uploads", express.static("uploads"));
 app.use("/assets", express.static(path.join(__dirname, "assets")));

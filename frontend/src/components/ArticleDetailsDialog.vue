@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { X, User, ThumbsUp, ThumbsDown, MessageSquare, Edit } from 'lucide-vue-next';
+import { X, User, ThumbsUp, ThumbsDown, MessageSquare, Edit, Trash2, Sparkles } from 'lucide-vue-next';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Article, Feedback } from '@/types';
@@ -19,6 +19,8 @@ const emit = defineEmits<{
   dislike: [];
   addFeedback: [comment: string];
   editArticle: [];
+  deleteArticle: [];
+  summarize: [];
 }>();
 
 const authStore = useAuthStore();
@@ -65,9 +67,21 @@ onUnmounted(() => {
 });
 
 
+const handleDelete = () => {
+  if (!confirm('Tem certeza que deseja deletar este artigo? Esta ação não pode ser desfeita.')) {
+    return;
+  }
+  emit('deleteArticle');
+  handleClose();
+};
+
 const handleEdit = () => {
   emit('editArticle');
   handleClose();
+};
+
+const handleSummarize = () => {
+  emit('summarize');
 };
 
 const formatFeedbackDate = (dateString: string) => {
@@ -87,7 +101,7 @@ const formatFeedbackDate = (dateString: string) => {
             <h2 class="text-2xl font-bold text-gray-900 mb-2">
               {{ article.title }}
             </h2>
-            <span class="badge badge-primary">{{ article.category }}</span>
+            <span class="badge badge-primary">{{ article.categoryName || article.category }}</span>
           </div>
           <button
             @click="handleClose"
@@ -163,14 +177,34 @@ const formatFeedbackDate = (dateString: string) => {
             <span class="font-medium">{{ article.dislikes }}</span>
           </button>
 
-          <button
-            v-if="isAuthor"
-            @click="handleEdit"
-            class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ml-auto"
-          >
-            <Edit :size="18" />
-            Editar Artigo
-          </button>
+          <div class="ml-auto flex items-center gap-2">
+            <button
+              @click="handleSummarize"
+              class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
+              title="Resumir artigo com IA"
+            >
+              <Sparkles :size="18" />
+              <span class="hidden sm:inline">Resumir com IA</span>
+            </button>
+
+            <button
+              v-if="isAuthor"
+              @click="handleDelete"
+              class="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Trash2 :size="18" />
+              Deletar Artigo
+            </button>
+
+            <button
+              v-if="isAuthor"
+              @click="handleEdit"
+              class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Edit :size="18" />
+              Editar Artigo
+            </button>
+          </div>
         </div>
 
         <hr class="my-6 border-gray-200" />

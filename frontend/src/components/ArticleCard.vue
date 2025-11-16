@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { User, ThumbsUp, ThumbsDown, MessageSquare, Calendar, BookOpen } from 'lucide-vue-next';
+import { User, ThumbsUp, ThumbsDown, MessageSquare, Calendar, BookOpen, Sparkles } from 'lucide-vue-next';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Article } from '@/types';
@@ -13,6 +13,7 @@ const emit = defineEmits<{
   viewDetails: [];
   like: [];
   dislike: [];
+  summarize: [];
 }>();
 
 const authStore = useAuthStore();
@@ -34,6 +35,11 @@ const handleDislike = (e: Event) => {
     emit('dislike');
   }
 };
+
+const handleSummarize = (e: Event) => {
+  e.stopPropagation();
+  emit('summarize');
+};
 </script>
 
 <template>
@@ -47,7 +53,7 @@ const handleDislike = (e: Event) => {
         <h3 class="text-base font-bold text-foreground line-clamp-2 flex-1 group-hover:text-primary transition-colors">
           {{ article.title }}
         </h3>
-        <span class="badge badge-primary text-xs font-bold flex-shrink-0">{{ article.category }}</span>
+        <span class="badge badge-primary text-xs font-bold flex-shrink-0">{{ article.categoryName || article.category }}</span>
       </div>
       <p class="text-xs text-muted-foreground line-clamp-2">
         {{ article.abstract }}
@@ -60,7 +66,7 @@ const handleDislike = (e: Event) => {
       <div class="space-y-2">
         <div class="flex items-center gap-2 text-xs text-muted-foreground">
           <User :size="14" class="flex-shrink-0" />
-          <span class="truncate">{{ article.authors.slice(0, 1).join(', ') }}</span>
+          <span class="truncate">{{ (article.authors && article.authors.length > 0) ? article.authors.slice(0, 1).join(', ') : 'Autor desconhecido' }}</span>
         </div>
         
         <div class="flex items-center gap-2 text-xs text-muted-foreground">
@@ -72,7 +78,7 @@ const handleDislike = (e: Event) => {
       <!-- Keywords -->
       <div class="flex flex-wrap gap-1">
         <span
-          v-for="keyword in article.keywords?.slice(0, 3)"
+          v-for="keyword in (article.keywords && article.keywords.length > 0) ? article.keywords.slice(0, 3) : []"
           :key="keyword"
           class="badge badge-outline text-xs"
         >
@@ -122,7 +128,17 @@ const handleDislike = (e: Event) => {
           title="Feedbacks"
         >
           <MessageSquare :size="14" />
-          <span>0</span>
+          <span>{{ article.feedbackCount || 0 }}</span>
+        </button>
+
+        <!-- Summarize with AI -->
+        <button
+          @click.stop="handleSummarize"
+          class="ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-medium bg-gradient-to-r from-primary/10 to-purple-100 text-primary hover:from-primary/20 hover:to-purple-200"
+          title="Resumir com IA"
+        >
+          <Sparkles :size="14" />
+          <span class="hidden sm:inline">IA</span>
         </button>
       </div>
     </div>

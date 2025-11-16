@@ -16,12 +16,14 @@ export interface Article {
   authors: string[];
   keywords: string[];
   category: string;
+  categoryName?: string;
   date: string;
   authorId?: string;
   authorName?: string;
   likes: number;
   dislikes: number;
   userVote?: 'like' | 'dislike' | null;
+  feedbackCount?: number;
 }
 
 export interface Feedback {
@@ -34,6 +36,14 @@ export interface Feedback {
   createdAt: string;
 }
 
+export interface Category {
+  _id: string;
+  nome: string;
+  descricao?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ArticleFormData {
   title: string;
   category: string;
@@ -42,14 +52,3 @@ export interface ArticleFormData {
   authors: string;
   keywords: string;
 }
-
-export const CATEGORIES = [
-  'Medicina',
-  'Física',
-  'Biologia',
-  'Engenharia',
-  'Neurociência',
-  'Computação'
-] as const;
-
-export type Category = typeof CATEGORIES[number];

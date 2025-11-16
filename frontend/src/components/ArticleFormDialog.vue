@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { X } from 'lucide-vue-next';
-import { CATEGORIES } from '@/types';
 import type { Article, ArticleFormData } from '@/types';
+import { useArticlesStore } from '@/stores/articles';
 import { toast } from 'vue-sonner';
 
 const props = defineProps<{
@@ -14,6 +14,8 @@ const emit = defineEmits<{
   'update:open': [value: boolean];
   save: [data: ArticleFormData, articleId?: string];
 }>();
+
+const articlesStore = useArticlesStore();
 
 const title = ref('');
 const category = ref('');
@@ -126,8 +128,8 @@ const handleClose = () => {
             </label>
             <select v-model="category" required class="select">
               <option value="">Selecione uma categoria</option>
-              <option v-for="cat in CATEGORIES" :key="cat" :value="cat">
-                {{ cat }}
+              <option v-for="cat in articlesStore.categories" :key="cat._id" :value="cat._id">
+                {{ cat.nome }}
               </option>
             </select>
           </div>

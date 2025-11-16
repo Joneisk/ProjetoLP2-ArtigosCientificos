@@ -4,8 +4,14 @@ import LoginController from "../controller/LoginController.js";
 
 const router = express.Router();
 
+// Rota para login
+router.post("/login", LoginController.login);
+
 // Rota para cadastro de novo login
 router.post("/register", LoginController.register);
+
+// Rota para redefinir senha
+router.post("/reset-password", LoginController.resetPassword);
 
 // Rota para listar logins (ou clientes)
 router.get("/list", LoginController.list);

@@ -54,10 +54,10 @@ const handleSubmit = async () => {
       toast.success('Login realizado com sucesso!');
       emit('update:open', false);
     } else {
-      toast.error('Credenciais inválidas');
+      toast.error(authStore.error || 'Credenciais inválidas');
     }
   } catch (error) {
-    toast.error('Erro ao fazer login');
+    toast.error(authStore.error || 'Erro ao fazer login');
   } finally {
     loading.value = false;
   }

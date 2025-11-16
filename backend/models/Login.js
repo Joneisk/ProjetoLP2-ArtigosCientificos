@@ -2,10 +2,11 @@ import bcrypt from "bcrypt";
 import LoginModel from "./LoginSchema.js";
 
 class Login {
-    constructor(nome, email, senha) {
+    constructor(nome, email, senha, instituicao = null) {
         this.nome = nome;
         this.email = email;
         this.senha = senha;
+        this.instituicao = instituicao;
     }
 
     // salva o usuário com senha criptografada
@@ -17,6 +18,7 @@ class Login {
             nome: this.nome,
             email: this.email,
             senha: senhaCriptografada,
+            instituicao: this.instituicao,
         });
 
         return await login.save();

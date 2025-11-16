@@ -1,42 +1,39 @@
-import bcrypt from "bcrypt";
-import LoginModel from "./LoginSchema.js";
+import CategoriaModel from "./CategoriaSchema.js";
 
-class Login {
-    constructor(nome, email, senha) {
+class Categoria {
+    constructor(nome, descricao = null) {
         this.nome = nome;
-        this.email = email;
-        this.senha = senha;
+        this.descricao = descricao;
     }
 
-    // salva o usuário com senha criptografada
     async save() {
-        const salt = await bcrypt.genSalt(10);
-        const senhaCriptografada = await bcrypt.hash(this.senha, salt);
-
-        const login = new LoginModel({
+        const categoria = new CategoriaModel({
             nome: this.nome,
-            email: this.email,
-            senha: senhaCriptografada,
+            descricao: this.descricao,
         });
 
-        return await login.save();
+        return await categoria.save();
     }
 
-    static async findByEmail(email) {
-        return await LoginModel.findOne({ email: email });
+    static async findAll() {
+        return await CategoriaModel.find().sort({ nome: 1 });
     }
 
-    static async comparePassword(senhaDigitada, senhaHash) {
-        return await bcrypt.compare(senhaDigitada, senhaHash);
+    static async findById(id) {
+        return await CategoriaModel.findById(id);
     }
 
-    static async deleteByEmail(email) {
-        return await LoginModel.deleteOne({ email: email });
+    static async findByName(nome) {
+        return await CategoriaModel.findOne({ nome: nome });
     }
 
-    static async update(email, updateData) {
-        return await LoginModel.updateOne({ email: email }, updateData);
+    static async updateById(id, updateData) {
+        return await CategoriaModel.findByIdAndUpdate(id, updateData, { new: true });
+    }
+
+    static async deleteById(id) {
+        return await CategoriaModel.findByIdAndDelete(id);
     }
 }
 
-export default Login;
+export default Categoria;

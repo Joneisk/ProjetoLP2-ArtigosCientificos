@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Search } from 'lucide-vue-next';
-import { CATEGORIES } from '@/types';
+import { useArticlesStore } from '@/stores/articles';
 
 const props = defineProps<{
   searchQuery: string;
@@ -11,6 +11,8 @@ const emit = defineEmits<{
   'update:searchQuery': [value: string];
   'update:category': [value: string];
 }>();
+
+const articlesStore = useArticlesStore();
 </script>
 
 <template>
@@ -36,8 +38,8 @@ const emit = defineEmits<{
         class="select"
       >
         <option value="all">Todas as Categorias</option>
-        <option v-for="cat in CATEGORIES" :key="cat" :value="cat">
-          {{ cat }}
+        <option v-for="cat in articlesStore.categories" :key="cat._id" :value="cat._id">
+          {{ cat.nome }}
         </option>
       </select>
     </div>
