@@ -11,6 +11,8 @@ const client = new GoogleGenAI({
     apiKey: apiKey
 });
 
+const model = "models/gemini-2.5-flash";
+
 async function resumirArtigo(artigo) {
     if (!artigo || !artigo.conteudo) {
         return { 
@@ -54,10 +56,11 @@ ${artigo.conteudo}
 Retorne **estritamente** em formato JSON válido, sem markdown ou formatação extra.`;
 
     try {
-        const model = client.getModel({ model: "gemini-2.0-flash" });
-        const response = await model.generateContent(prompt);
+        const response = await client.models.generateContent({model, contents: prompt});
         
         let jsonText = '';
+
+        console.log(response);
         
         // Tentar extrair texto da resposta
         if (response.response && response.response.text) {
