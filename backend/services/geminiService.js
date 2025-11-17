@@ -1,99 +1,108 @@
-import { GoogleGenAI } from '@google/genai';
-import 'dotenv/config';
+import { GoogleGenAI } from "@google/genai";
+import "dotenv/config";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
-    console.error('GEMINI_API_KEY não configurada');
+    console.error("❌ GEMINI_API_KEY não configurada");
 }
 
-const client = new GoogleGenAI({
-    apiKey: apiKey
-});
-
+const client = new GoogleGenAI({ apiKey });
 const model = "models/gemini-2.5-flash";
+
+// Função utilitária de retry
+async function retry(fn, retries = 5, delay = 1000) {
+    try {
+        return await fn();
+    } catch (err) {
+        if (retries <= 0) throw err;
+        console.log(`⏳ Retentando em ${delay}ms... (${retries} restantes)`);
+        await new Promise((res) => setTimeout(res, delay));
+        return retry(fn, retries - 1, delay * 2);
+    }
+}
 
 async function resumirArtigo(artigo) {
     if (!artigo || !artigo.conteudo) {
-        return { 
-            tituloResumo: "Artigo inválido", 
+        return {
+            tituloResumo: "Artigo inválido",
             comentarioResumo: "Não há conteúdo suficiente para resumir.",
             sitesRecomendados: [],
             insights: ""
         };
     }
 
-    const prompt = `Você é um assistente acadêmico especializado em análise de artigos científicos.
-Sua tarefa é resumir e analisar o artigo científico abaixo de forma completa.
-
-O resumo deve conter em formato JSON:
+    const prompt = `
+Você é um assistente acadêmico especializado em artigos científicos.
+Gere um resumo estruturado em JSON contendo:
 {
-    "tituloResumo": "Título curto (máx 8 palavras) capturando o tema principal",
-    "comentarioResumo": "Parágrafo com até 150 palavras destacando objetivo, metodologia e principais conclusões",
-    "sitesRecomendados": [
-        {
-            "nome": "Nome do site/base de dados acadêmica",
-            "url": "url ou descrição do site",
-            "motivo": "Por que é relevante para este tópico"
-        }
-    ],
-    "insights": "2-3 insights interessantes sobre o tema do artigo (aplicações práticas, tendências futuras, impacto da pesquisa)"
+  "tituloResumo": "...",
+  "comentarioResumo": "...",
+  "sitesRecomendados": [
+    {"nome": "...", "url": "...", "motivo": "..."}
+  ],
+  "insights": "..."
 }
 
 ARTIGO:
----
 Título: ${artigo.titulo}
-Autores: ${artigo.autores ? artigo.autores.join(', ') : 'Não informado'}
-Categorias: ${artigo.categoria ? artigo.categoria : 'Não informado'}
-Palavras-chave: ${artigo.palavrasChave ? artigo.palavrasChave.join(', ') : 'Não informado'}
-Data de publicação: ${artigo.dataPublicacao}
-Resumo fornecido: ${artigo.resumo}
+Autores: ${artigo.autores?.join(", ") || "Não informado"}
+Categoria: ${artigo.categoria ?? "Não informado"}
+Palavras-chave: ${artigo.palavrasChave?.join(", ") ?? "Não informado"}
+Resumo: ${artigo.resumo}
 
 Conteúdo completo:
 ${artigo.conteudo}
----
 
-Retorne **estritamente** em formato JSON válido, sem markdown ou formatação extra.`;
+Retorne **apenas JSON válido**, sem markdown.
+`;
 
     try {
-        const response = await client.models.generateContent({model, contents: prompt});
-        
-        let jsonText = '';
+        const response = await retry(() =>
+            client.models.generateContent({
+                model,
+                contents: prompt
+            })
+        );
 
-        console.log(response);
-        
-        // Tentar extrair texto da resposta
-        if (response.response && response.response.text) {
-            jsonText = response.response.text();
-        } else if (response.text) {
-            jsonText = response.text();
-        } else if (response.candidates && response.candidates[0]) {
-            const content = response.candidates[0].content;
-            if (content && content.parts && content.parts[0]) {
-                jsonText = content.parts[0].text;
-            }
+        // ------------------------------------
+        // EXTRAÇÃO REAL DO TEXTO DA RESPOSTA
+        // ------------------------------------
+        let jsonText = "";
+
+        if (
+            response?.candidates?.[0]?.content?.parts?.[0]?.text
+        ) {
+            jsonText = response.candidates[0].content.parts[0].text;
+        } else {
+            console.error("🔍 Resposta completa do Gemini:");
+            console.dir(response, { depth: null });
+            throw new Error("Formato inesperado da resposta do Gemini");
         }
 
-        if (!jsonText) {
-            throw new Error('Nenhuma resposta do Gemini');
-        }
+        if (!jsonText) throw new Error("Resposta vazia do Gemini");
 
-        // Limpar markdown
-        const cleanJson = jsonText.trim().replace(/```json\n?|\n?```/g, '').trim();
+        // Limpa markdown
+        const cleanJson = jsonText
+            .replace(/```json|```/g, "")
+            .trim();
+
         const parsed = JSON.parse(cleanJson);
-        
+
         return {
             tituloResumo: parsed.tituloResumo || "Resumo gerado",
             comentarioResumo: parsed.comentarioResumo || "",
             sitesRecomendados: Array.isArray(parsed.sitesRecomendados) ? parsed.sitesRecomendados : [],
             insights: parsed.insights || ""
         };
+
     } catch (error) {
-        console.error("Erro na chamada da API Gemini:", error.message);
+        console.error("❌ Erro na chamada da API Gemini:", error.message);
         console.error("Stack:", error.stack);
-        return { 
-            tituloResumo: "Erro de IA", 
-            comentarioResumo: "Não foi possível gerar o resumo. Tente novamente mais tarde.",
+
+        return {
+            tituloResumo: "Erro de IA",
+            comentarioResumo: "Não foi possível gerar o resumo agora. Tente mais tarde.",
             sitesRecomendados: [],
             insights: ""
         };
