@@ -37,12 +37,13 @@ async function seedAdmin() {
     const senhaHasheada = await bcrypt.hash(adminPadrao.senha, salt);
 
     // Criar admin
-    const admin = new Login(
-      adminPadrao.nome,
-      adminPadrao.email,
-      senhaHasheada,
-      adminPadrao.instituicao
-    );
+    const admin = new Login({
+      nome: adminPadrao.nome,
+      email: adminPadrao.email,
+      senha: senhaHasheada,
+      instituicao: adminPadrao.instituicao,
+    });
+
     const saved = await admin.save();
     console.log(`Admin criado com sucesso! Email: ${saved.email}`);
   } catch (error) {
